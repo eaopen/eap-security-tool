@@ -1,0 +1,2 @@
+-- 初始化 SonarQube 数据库
+-- PostgreSQL 会自动创建 POSTGRES_DB 指定的数据库

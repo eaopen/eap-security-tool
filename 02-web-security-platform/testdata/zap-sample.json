@@ -1,0 +1,62 @@
+{
+  "@version": "2.11.1",
+  "@generated": "Mon, 15 Jan 2024 10:30:45",
+  "site": [
+    {
+      "@name": "http://testfire.net",
+      "@host": "testfire.net",
+      "@port": "80",
+      "@ssl": "false",
+      "alerts": [
+        {
+          "pluginid": "40012",
+          "alert": "Cross Site Scripting (Reflected)",
+          "name": "Cross Site Scripting (Reflected)",
+          "riskcode": "3",
+          "confidence": "2",
+          "riskdesc": "High (Medium)",
+          "desc": "Cross-site Scripting (XSS) is an attack technique that involves echoing attacker-supplied code into a user's browser instance.",
+          "count": "1",
+          "solution": "Phase: Architecture and Design. Use a vetted library or framework that does not allow this weakness to occur or provides constructs that make this weakness easier to avoid.",
+          "reference": "http://projects.webappsec.org/Cross-Site-Scripting\nhttps://owasp.org/www-community/attacks/xss/",
+          "cweid": "79",
+          "wascid": "8",
+          "sourceid": "3",
+          "instances": [
+            {
+              "uri": "http://testfire.net/search.jsp",
+              "method": "GET",
+              "param": "query",
+              "attack": "<script>alert(1)</script>",
+              "evidence": "<script>alert(1)</script>"
+            }
+          ]
+        },
+        {
+          "pluginid": "10202",
+          "alert": "Absence of Anti-CSRF Tokens",
+          "name": "Absence of Anti-CSRF Tokens",
+          "riskcode": "2",
+          "confidence": "2",
+          "riskdesc": "Medium (Medium)",
+          "desc": "No Anti-CSRF tokens were found in a HTML submission form.",
+          "count": "3",
+          "solution": "Phase: Architecture and Design. Generate a unique nonce for each form, place the nonce into the form, and verify the nonce upon receipt of the form.",
+          "reference": "http://www.owasp.org/index.php/Cross-Site_Request_Forgery\nhttp://cwe.mitre.org/data/definitions/352.html",
+          "cweid": "352",
+          "wascid": "9",
+          "sourceid": "3",
+          "instances": [
+            {
+              "uri": "http://testfire.net/login.jsp",
+              "method": "POST",
+              "param": "",
+              "attack": "",
+              "evidence": "<form method=\"post\" action=\"/bank/login.aspx\">"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

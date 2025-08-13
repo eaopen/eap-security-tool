@@ -1,0 +1,42 @@
+[
+  {
+    "Description": "AWS Access Key",
+    "StartLine": 42,
+    "EndLine": 42,
+    "StartColumn": 15,
+    "EndColumn": 35,
+    "Match": "AKIAIOSFODNN7EXAMPLE",
+    "Secret": "AKIAIOSFODNN7EXAMPLE",
+    "File": "src/config/aws.js",
+    "SymlinkFile": "",
+    "Commit": "abc123def456789012345678901234567890abcd",
+    "Entropy": 3.5,
+    "Author": "developer@example.com",
+    "Email": "developer@example.com",
+    "Date": "2025-01-10T08:00:00Z",
+    "Message": "Add AWS configuration",
+    "Tags": [],
+    "RuleID": "aws-access-token",
+    "Fingerprint": "abc123def456789012345678901234567890abcd:src/config/aws.js:aws-access-token:42"
+  },
+  {
+    "Description": "Generic API Key",
+    "StartLine": 15,
+    "EndLine": 15,
+    "StartColumn": 20,
+    "EndColumn": 52,
+    "Match": "api_key=sk_test_123456789012345678901234",
+    "Secret": "sk_test_123456789012345678901234",
+    "File": "config.env",
+    "SymlinkFile": "",
+    "Commit": "def789abc123456789012345678901234567890def",
+    "Entropy": 4.2,
+    "Author": "admin@example.com",
+    "Email": "admin@example.com",
+    "Date": "2025-01-09T16:30:00Z",
+    "Message": "Update API configuration",
+    "Tags": [],
+    "RuleID": "generic-api-key",
+    "Fingerprint": "def789abc123456789012345678901234567890def:config.env:generic-api-key:15"
+  }
+]

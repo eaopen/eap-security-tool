@@ -1,0 +1,25 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "security-overview",
+    "title": "Security Overview",
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 1,
+    "panels": [
+      {
+        "type": "stat",
+        "title": "Open Findings (placeholder)",
+        "gridPos": {"x": 0, "y": 0, "w": 8, "h": 4},
+        "targets": [
+          {
+            "format": "table",
+            "rawSql": "SELECT 0 AS open_findings;",
+            "refId": "A"
+          }
+        ]
+      }
+    ]
+  },
+  "overwrite": true
+}

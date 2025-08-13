@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库 - 核心数据存储
+  postgres:
+    image: postgres:14-alpine
+    container_name: minimal-security-postgres
+    environment:
+      POSTGRES_DB: defectdojo
+      POSTGRES_USER: defectdojo
+      POSTGRES_PASSWORD: defectdojo123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - security-net
+    restart: unless-stopped
+
+  # Redis - 缓存和任务队列
+  redis:
+    image: redis:7-alpine
+    container_name: minimal-security-redis
+    command: redis-server --requirepass redis123
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - security-net
+    restart: unless-stopped
+
+  # DefectDojo - 漏洞管理
+  defectdojo:
+    image: defectdojo/defectdojo-django:latest
+    container_name: minimal-security-dojo
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DD_DATABASE_URL: postgresql://defectdojo:defectdojo123@postgres:5432/defectdojo
+      DD_CELERY_BROKER_URL: redis://:redis123@redis:6379/0
+      DD_SECRET_KEY: minimal-demo-key-not-for-production
+      DD_ALLOWED_HOSTS: "*"
+      DD_DEBUG: "False"
+      DD_FORCE_SCRIPT_NAME: "/dojo"
+    volumes:
+      - defectdojo_media:/app/media
+    ports:
+      - "8080:8080"
+    networks:
+      - security-net
+    restart: unless-stopped
+
+  # ZAP - 轻量级扫描器
+  zap:
+    image: owasp/zap2docker-stable:latest
+    container_name: minimal-security-zap
+    command: zap.sh -daemon -host 0.0.0.0 -port 8090 -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true
+    ports:
+      - "8090:8090"
+    volumes:
+      - zap_data:/zap/wrk
+    networks:
+      - security-net
+    restart: unless-stopped
+
+  # Grafana - 简化版仪表盘
+  grafana:
+    image: grafana/grafana:latest
+    container_name: minimal-security-grafana
+    depends_on:
+      - postgres
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: postgres:5432
+      GF_DATABASE_NAME: grafana
+      GF_DATABASE_USER: defectdojo
+      GF_DATABASE_PASSWORD: defectdojo123
+      GF_SERVER_ROOT_URL: "http://localhost/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - security-net
+    restart: unless-stopped
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: minimal-security-nginx
+    depends_on:
+      - defectdojo
+      - grafana
+      - zap
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    networks:
+      - security-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  defectdojo_media:
+  grafana_data:
+  zap_data:
+
+networks:
+  security-net:
+    driver: bridge

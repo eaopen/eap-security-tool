@@ -1,0 +1,129 @@
+# Jenkins 安全流水线配置文件
+# 用于 Configuration as Code 插件 (JCasC)
+
+jenkins:
+  systemMessage: "DevSecOps 安全流水线 - Jenkins"
+  numExecutors: 2
+  scmCheckoutRetryCount: 3
+  mode: NORMAL
+  
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "${JENKINS_ADMIN_PASSWORD:-admin123}"
+
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: "SONAR_HOST_URL"
+            value: "http://sonarqube:9000"
+          - key: "SONAR_PROJECT_KEY"
+            value: "security-pipeline"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: "sonarqube-token"
+              username: "admin"
+              password: "admin"
+              description: "SonarQube 访问令牌"
+
+tool:
+  # SonarQube Scanner 配置
+  sonarRunnerInstallation:
+    installations:
+      - name: "SonarQube Scanner"
+        properties:
+          - installSource:
+              installers:
+                - sonarRunnerInstaller:
+                    id: "4.8.0.2856"
+
+  # Maven 配置
+  maven:
+    installations:
+      - name: "Maven"
+        properties:
+          - installSource:
+              installers:
+                - maven:
+                    id: "3.8.6"
+
+jobs:
+  - script: |
+      pipelineJob('security-pipeline-example') {
+        definition {
+          cps {
+            script('''
+              pipeline {
+                  agent any
+                  
+                  tools {
+                      maven 'Maven'
+                  }
+                  
+                  stages {
+                      stage('代码检出') {
+                          steps {
+                              // 示例：从 Git 仓库检出代码
+                              echo '检出代码...'
+                          }
+                      }
+                      
+                      stage('安全扫描') {
+                          parallel {
+                              stage('SonarQube 分析') {
+                                  steps {
+                                      script {
+                                          def scannerHome = tool 'SonarQube Scanner'
+                                          withSonarQubeEnv('SonarQube') {
+                                              sh "${scannerHome}/bin/sonar-scanner"
+                                          }
+                                      }
+                                  }
+                              }
+                              
+                              stage('依赖漏洞扫描') {
+                                  steps {
+                                      sh 'mvn org.owasp:dependency-check-maven:check'
+                                  }
+                              }
+                          }
+                      }
+                      
+                      stage('质量门禁') {
+                          steps {
+                              timeout(time: 5, unit: 'MINUTES') {
+                                  waitForQualityGate abortPipeline: true
+                              }
+                          }
+                      }
+                  }
+                  
+                  post {
+                      always {
+                          publishHTML([
+                              allowMissing: false,
+                              alwaysLinkToLastBuild: true,
+                              keepAll: true,
+                              reportDir: 'target',
+                              reportFiles: 'dependency-check-report.html',
+                              reportName: '依赖漏洞扫描报告'
+                          ])
+                      }
+                  }
+              }
+            ''')
+            sandbox()
+          }
+        }
+      }

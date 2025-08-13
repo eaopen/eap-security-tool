@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:14-alpine
+    container_name: security-pipeline-postgres
+    environment:
+      POSTGRES_DB: sonarqube
+      POSTGRES_USER: sonarqube
+      POSTGRES_PASSWORD: sonarqube123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./configs/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - pipeline-net
+    restart: unless-stopped
+
+  # SonarQube 代码质量分析
+  sonarqube:
+    image: sonarqube:9-community
+    container_name: security-pipeline-sonarqube
+    depends_on:
+      - postgres
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonarqube
+      SONAR_JDBC_USERNAME: sonarqube
+      SONAR_JDBC_PASSWORD: sonarqube123
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: true
+      SONAR_WEB_CONTEXT: /sonar
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - ./configs/sonarqube:/opt/sonarqube/conf:ro
+    ports:
+      - "9000:9000"
+    networks:
+      - pipeline-net
+    restart: unless-stopped
+
+  # Jenkins 持续集成
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: security-pipeline-jenkins
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+      JENKINS_OPTS: "--prefix=/jenkins"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./configs/jenkins:/usr/share/jenkins/ref/casc_configs:ro
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    networks:
+      - pipeline-net
+    restart: unless-stopped
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: security-pipeline-nginx
+    depends_on:
+      - jenkins
+      - sonarqube
+    volumes:
+      - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    networks:
+      - pipeline-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+  jenkins_home:
+
+networks:
+  pipeline-net:
+    driver: bridge

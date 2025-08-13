@@ -1,0 +1,29 @@
+================================================================================
+
+  Lynis 3.0.8 Results
+  
+  Hardening index : 68 [############    ]
+  Tests performed : 249
+  Plugins enabled : 0
+
+================================================================================
+
+  System Tools
+  ------------
+  [ !! ] SSH daemon configuration                                 SSHD-7408
+
+      Details  : SSH client alive interval not configured
+      Solution : Consider hardening SSH configuration
+      
+  [ !! ] Kernel parameters (sysctl)                               KRNL-6000
+  
+      Details  : vm.swappiness set to 60, consider setting to 1-10
+      Solution : Edit /etc/sysctl.conf and set vm.swappiness=1
+
+  Suggestions (28):
+  ----------------------------
+  * Set a password on GRUB boot loader to prevent altering boot configuration (e.g. boot in single user mode without password) [BOOT-5122] 
+  * Install package apt-listbugs to display a list of critical bugs prior to each APT installation. [PKGS-7345]
+  * Consider running ARP monitoring software (arpwatch,arpon) [NETW-3032]
+
+================================================================================
