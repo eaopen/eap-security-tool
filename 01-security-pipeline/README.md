@@ -1,16 +1,16 @@
-# 内部开发安全流水线 (Security Pipeline)
+# 内部开发安全流水线
 
-> 定位：演示与评估优先，默认采用 Docker Compose 一键启动；中小企业开箱即用，亦可复用企业现有 Jenkins/GitLab/SonarQube 环境。
+基于 Jenkins + SonarQube 的 DevSecOps 安全流水线，提供代码质量分析、安全扫描和持续集成能力。
 
-本模块基于 GitLab、Jenkins 与 SonarQube，提供面向 Java 后端项目的容器化 DevSecOps 安全流水线。
+## 🚀 功能特性
 
-## 功能特性
-- 代码静态安全分析（SAST，基于 SonarQube）
-- 依赖漏洞扫描（SCA，Dependency-Check/Trivy）
-- CI/CD 安全集成（GitLab + Jenkins）
-- 基于 Docker Compose 的容器化部署
+- **静态代码扫描 (SAST)**: SonarQube 代码质量与安全分析
+- **依赖漏洞扫描 (SCA)**: OWASP Dependency Check 组件安全检测  
+- **CI/CD 安全集成**: Jenkins 流水线自动化安全检查
+- **质量门禁**: 基于安全规则的自动化质量管控
+- **统一访问入口**: Nginx 反向代理提供统一访问体验
 
-## 目录结构
+## 📁 目录结构
 ```
 01-security-pipeline/
 ├── deploy/
