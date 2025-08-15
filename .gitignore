@@ -11,3 +11,5 @@
 *.njsproj
 *.sln
 *.local
+
+.rules
