@@ -1,0 +1,233 @@
+# Spring Boot 专用安全流水线配置
+
+jenkins:
+  systemMessage: "Spring Boot DevSecOps 安全流水线"
+  numExecutors: 3
+  
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: "SONAR_HOST_URL"
+            value: "http://sonarqube:9000"
+          - key: "SPRING_PROFILES_ACTIVE"
+            value: "security-scan"
+          - key: "MAVEN_OPTS"
+            value: "-Xmx2g -XX:+UseG1GC"
+
+tool:
+  # JDK 配置
+  jdk:
+    installations:
+      - name: "JDK-11"
+        properties:
+          - installSource:
+              installers:
+                - adoptOpenJdkInstaller:
+                    id: "jdk-11.0.16+8"
+      - name: "JDK-17"
+        properties:
+          - installSource:
+              installers:
+                - adoptOpenJdkInstaller:
+                    id: "jdk-17.0.4+8"
+
+  # Maven 配置
+  maven:
+    installations:
+      - name: "Maven-3.8"
+        properties:
+          - installSource:
+              installers:
+                - maven:
+                    id: "3.8.6"
+
+  # SonarQube Scanner
+  sonarRunnerInstallation:
+    installations:
+      - name: "SonarQube Scanner"
+        properties:
+          - installSource:
+              installers:
+                - sonarRunnerInstaller:
+                    id: "4.8.0.2856"
+
+jobs:
+  - script: |
+      pipelineJob('spring-boot-security-pipeline') {
+        description('Spring Boot 应用安全扫描流水线')
+        definition {
+          cps {
+            script('''
+              pipeline {
+                  agent any
+                  
+                  tools {
+                      maven 'Maven-3.8'
+                      jdk 'JDK-11'
+                  }
+                  
+                  environment {
+                      SPRING_PROFILES_ACTIVE = 'security-scan'
+                      SONAR_PROJECT_KEY = "spring-boot-security"
+                  }
+                  
+                  stages {
+                      stage('环境准备') {
+                          steps {
+                              echo '准备Spring Boot安全扫描环境...'
+                              sh 'java -version'
+                              sh 'mvn -version'
+                          }
+                      }
+                      
+                      stage('代码检出') {
+                          steps {
+                              checkout scm
+                              sh 'ls -la'
+                          }
+                      }
+                      
+                      stage('编译构建') {
+                          steps {
+                              sh 'mvn clean compile -DskipTests'
+                          }
+                      }
+                      
+                      stage('安全扫描') {
+                          parallel {
+                              stage('静态代码分析 (SAST)') {
+                                  steps {
+                                      script {
+                                          def scannerHome = tool 'SonarQube Scanner'
+                                          withSonarQubeEnv('SonarQube') {
+                                              sh """
+                                                  ${scannerHome}/bin/sonar-scanner \
+                                                  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                                  -Dsonar.sources=src/main/java \
+                                                  -Dsonar.tests=src/test/java \
+                                                  -Dsonar.java.binaries=target/classes \
+                                                  -Dsonar.java.test.binaries=target/test-classes \
+                                                  -Dsonar.java.libraries=target/dependency/*.jar \
+                                                  -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+                                                  -Dsonar.qualitygate.wait=true
+                                              """
+                                          }
+                                      }
+                                  }
+                              }
+                              
+                              stage('依赖漏洞扫描 (SCA)') {
+                                  steps {
+                                      sh """
+                                          mvn org.owasp:dependency-check-maven:8.4.0:check \
+                                          -DfailBuildOnCVSS=7 \
+                                          -DsuppressionsLocation=security/dependency-check-suppressions.xml \
+                                          -Dformats=HTML,JSON,XML
+                                      """
+                                  }
+                              }
+                              
+                              stage('Spring Boot安全检查') {
+                                  steps {
+                                      script {
+                                          // Spring Boot Actuator 安全检查
+                                          sh """
+                                              # 检查敏感端点暴露
+                                              grep -r "management.endpoints.web.exposure.include" src/ || echo "未发现端点配置"
+                                              
+                                              # 检查安全配置
+                                              find src/ -name "*.properties" -o -name "*.yml" -o -name "*.yaml" | xargs grep -l "security" || echo "未发现安全配置"
+                                              
+                                              # 检查数据库连接配置
+                                              find src/ -name "*.properties" -o -name "*.yml" -o -name "*.yaml" | xargs grep -E "(password|username|url)" || echo "未发现数据库配置"
+                                          """
+                                      }
+                                  }
+                              }
+                              
+                              stage('容器安全扫描') {
+                                  when {
+                                      expression { fileExists('Dockerfile') }
+                                  }
+                                  steps {
+                                      script {
+                                          // 使用 Trivy 扫描容器镜像
+                                          sh """
+                                              docker build -t spring-boot-app:latest .
+                                              docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                                                  -v \$(pwd):/workspace aquasec/trivy:latest \
+                                                  image --format json --output /workspace/trivy-report.json \
+                                                  spring-boot-app:latest
+                                          """
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                      
+                      stage('安全测试') {
+                          steps {
+                              sh """
+                                  # 运行安全相关的单元测试
+                                  mvn test -Dtest=**/*SecurityTest
+                                  
+                                  # 生成测试覆盖率报告
+                                  mvn jacoco:report
+                              """
+                          }
+                      }
+                      
+                      stage('质量门禁') {
+                          steps {
+                              timeout(time: 10, unit: 'MINUTES') {
+                                  script {
+                                      def qg = waitForQualityGate()
+                                      if (qg.status != 'OK') {
+                                          error "质量门禁失败: ${qg.status}"
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  }
+                  
+                  post {
+                      always {
+                          // 发布测试报告
+                          publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
+                          
+                          // 发布覆盖率报告
+                          publishCoverage adapters: [jacocoAdapter('target/site/jacoco/jacoco.xml')], sourceFileResolver: sourceFiles('STORE_LAST_BUILD')
+                          
+                          // 发布依赖检查报告
+                          publishHTML([
+                              allowMissing: false,
+                              alwaysLinkToLastBuild: true,
+                              keepAll: true,
+                              reportDir: 'target',
+                              reportFiles: 'dependency-check-report.html',
+                              reportName: '依赖漏洞扫描报告'
+                          ])
+                          
+                          // 发布容器扫描报告
+                          script {
+                              if (fileExists('trivy-report.json')) {
+                                  archiveArtifacts artifacts: 'trivy-report.json', fingerprint: true
+                              }
+                          }
+                      }
+                      
+                      failure {
+                          emailext (
+                              subject: "Spring Boot安全扫描失败: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                              body: "构建失败，请检查安全扫描结果。\n\n构建URL: ${env.BUILD_URL}",
+                              to: "${env.CHANGE_AUTHOR_EMAIL}"
+                          )
+                      }
+                  }
+              }
+            ''')
+            sandbox()
+          }
+        }
+      }

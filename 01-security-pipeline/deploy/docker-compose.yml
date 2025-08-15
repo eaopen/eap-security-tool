@@ -46,8 +46,9 @@ services:
     image: jenkins/jenkins:lts
     container_name: security-pipeline-jenkins
     environment:
-      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false -Xmx2g"
       JENKINS_OPTS: "--prefix=/jenkins"
+      CASC_JENKINS_CONFIG: "/usr/share/jenkins/ref/casc_configs"
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
@@ -58,6 +59,19 @@ services:
     networks:
       - pipeline-net
     restart: unless-stopped
+
+  # Trivy 容器安全扫描
+  trivy:
+    image: aquasec/trivy:latest
+    container_name: security-pipeline-trivy
+    volumes:
+      - trivy_cache:/root/.cache/trivy
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - pipeline-net
+    restart: "no"
+    profiles:
+      - tools
 
   # Nginx 反向代理
   nginx:
@@ -80,6 +94,7 @@ volumes:
   sonarqube_logs:
   sonarqube_extensions:
   jenkins_home:
+  trivy_cache:
 
 networks:
   pipeline-net:

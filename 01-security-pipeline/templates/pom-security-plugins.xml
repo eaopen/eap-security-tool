@@ -1,0 +1,161 @@
+<!-- Spring Boot 项目安全插件配置模板 -->
+<!-- 将以下配置添加到您的 pom.xml 文件中 -->
+
+<properties>
+    <!-- 安全扫描相关版本 -->
+    <dependency-check-maven.version>8.4.0</dependency-check-maven.version>
+    <spotbugs-maven-plugin.version>4.7.3.0</spotbugs-maven-plugin.version>
+    <jacoco-maven-plugin.version>0.8.8</jacoco-maven-plugin.version>
+    <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
+</properties>
+
+<build>
+    <plugins>
+        <!-- OWASP 依赖检查插件 -->
+        <plugin>
+            <groupId>org.owasp</groupId>
+            <artifactId>dependency-check-maven</artifactId>
+            <version>${dependency-check-maven.version}</version>
+            <configuration>
+                <!-- 设置CVSS阈值，7分以上视为高危 -->
+                <failBuildOnCVSS>7</failBuildOnCVSS>
+                <!-- 输出格式 -->
+                <formats>
+                    <format>HTML</format>
+                    <format>JSON</format>
+                    <format>XML</format>
+                </formats>
+                <!-- 抑制文件位置 -->
+                <suppressionFiles>
+                    <suppressionFile>security/dependency-check-suppressions.xml</suppressionFile>
+                </suppressionFiles>
+                <!-- 数据库更新 -->
+                <autoUpdate>true</autoUpdate>
+                <!-- 分析器配置 -->
+                <analyzers>
+                    <jarAnalyzer>true</jarAnalyzer>
+                    <nodeAnalyzer>false</nodeAnalyzer>
+                    <retirejs>false</retirejs>
+                </analyzers>
+            </configuration>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>check</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+
+        <!-- SpotBugs 静态分析插件 -->
+        <plugin>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-maven-plugin</artifactId>
+            <version>${spotbugs-maven-plugin.version}</version>
+            <configuration>
+                <effort>Max</effort>
+                <threshold>Low</threshold>
+                <xmlOutput>true</xmlOutput>
+                <failOnError>true</failOnError>
+                <includeFilterFile>security/spotbugs-security-include.xml</includeFilterFile>
+                <plugins>
+                    <plugin>
+                        <groupId>com.h3xstream.findsecbugs</groupId>
+                        <artifactId>findsecbugs-plugin</artifactId>
+                        <version>1.12.0</version>
+                    </plugin>
+                </plugins>
+            </configuration>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>check</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+
+        <!-- JaCoCo 代码覆盖率插件 -->
+        <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>${jacoco-maven-plugin.version}</version>
+            <configuration>
+                <rules>
+                    <rule>
+                        <element>BUNDLE</element>
+                        <limits>
+                            <limit>
+                                <counter>INSTRUCTION</counter>
+                                <value>COVEREDRATIO</value>
+                                <minimum>0.80</minimum>
+                            </limit>
+                        </limits>
+                    </rule>
+                </rules>
+            </configuration>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>prepare-agent</goal>
+                    </goals>
+                </execution>
+                <execution>
+                    <id>report</id>
+                    <phase>test</phase>
+                    <goals>
+                        <goal>report</goal>
+                    </goals>
+                </execution>
+                <execution>
+                    <id>check</id>
+                    <goals>
+                        <goal>check</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+
+        <!-- SonarQube 插件 -->
+        <plugin>
+            <groupId>org.sonarsource.scanner.maven</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+            <version>${sonar-maven-plugin.version}</version>
+        </plugin>
+
+        <!-- Spring Boot 插件增强配置 -->
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <configuration>
+                <!-- 安全相关配置 -->
+                <excludeDevtools>true</excludeDevtools>
+                <layers>
+                    <enabled>true</enabled>
+                </layers>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
+
+<!-- 安全相关依赖 -->
+<dependencies>
+    <!-- Spring Security -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    
+    <!-- Spring Security Test -->
+    <dependency>
+        <groupId>org.springframework.security</groupId>
+        <artifactId>spring-security-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    
+    <!-- Actuator 安全监控 -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+</dependencies>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<profile>
+  <name>Spring Boot Security Profile</name>
+  <language>java</language>
+  <rules>
+    <!-- Spring Security 相关规则 -->
+    <rule>
+      <repositoryKey>java</repositoryKey>
+      <key>S4502</key> <!-- CSRF protection should be enabled -->
+      <priority>BLOCKER</priority>
+    </rule>
+    <rule>
+      <repositoryKey>java</repositoryKey>
+      <key>S4784</key> <!-- Using regular expressions is security-sensitive -->
+      <priority>CRITICAL</priority>
+    </rule>
+    <rule>
+      <repositoryKey>java</repositoryKey>
+      <key>S2068</key> <!-- Credentials should not be hard-coded -->
+      <priority>BLOCKER</priority>
+    </rule>
+    <rule>
+      <repositoryKey>java</repositoryKey>
+      <key>S5542</key> <!-- Encryption algorithms should be robust -->
+      <priority>CRITICAL</priority>
+    </rule>
+    <!-- SQL注入防护 -->
+    <rule>
+      <repositoryKey>java</repositoryKey>
+      <key>S2077</key> <!-- SQL queries should not be vulnerable to injection attacks -->
+      <priority>BLOCKER</priority>
+    </rule>
+    <!-- XSS防护 -->
+    <rule>
+      <repositoryKey>java</repositoryKey>
+      <key>S5131</key> <!-- Endpoints should not be vulnerable to reflected XSS attacks -->
+      <priority>BLOCKER</priority>
+    </rule>
+  </rules>
+</profile>
